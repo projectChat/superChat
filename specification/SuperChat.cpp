@@ -287,8 +287,8 @@ user_data User ( (char*) "user" );
 message_data Message ( (char*) "msg" );
 
 
-void window1(user &);
-void window2(user &, chatroom &);
+void window1(unsigned int &);
+void window2(unsigned int, chatroom &);
 void *show_message(void *ptr);
 void *get_message(void *t);
 
@@ -303,22 +303,23 @@ int main()
    chatRoom.send(chatroom_info);
 
    //create new user
-   user user_info;
    
-   window1(user_info);
+   unsigned int uuid;
+   window1(uuid);
    	
    
-   window2(user_info, chatroom_info);
+   window2(uuid, chatroom_info);
 	
    endwin();
    return 0;
 }
 
-void window1(user &user_info)
+void window1(unsigned int &uuid)
 {
-	user_info.uuid = rand()/100 + 1;
+	user user_info;
+	//user_info.uuid = rand()/100 + 1;
 	user_info.chatroom_idx = 1;
- 	
+ 	uuid = user_info.uuid;
 	
 	WINDOW *my_wins[3];
 	PANEL  *my_panels[3];
@@ -334,7 +335,7 @@ void window1(user &user_info)
 	init_pair(1, COLOR_CYAN, COLOR_BLACK);
 	init_pair(2, COLOR_YELLOW, COLOR_BLACK);
 	init_pair(3, COLOR_GREEN, COLOR_BLACK);
-    init_pair(4, COLOR_MAGENTA, COLOR_BLACK);
+    	init_pair(4, COLOR_MAGENTA, COLOR_BLACK);
 
 	// Create windows for the panels 
 	//              (lines, cols, y, x);
@@ -375,6 +376,11 @@ void window1(user &user_info)
 
 	// Enter username here at this location
 	//mvprintw(15,55 ,"Enter the text here:");
+	char *ptr;
+	char value_id[5];
+	mvgetstr(10,50, value_id);
+	user_info.uuid = strtol(value_id, &ptr, 10);
+	uuid = user_info.uuid;
 	mvgetstr(15,50, str_user);
 	strncpy(user_info.nick, str_user, sizeof(user_info.nick));
 	User.send(user_info);
@@ -384,7 +390,7 @@ message_list_t  message_List;
 chatroom_list_t  room_List;
 user_list_t  user_List;	
 
-void window2(user &user_info, chatroom &chatroom_info)
+void window2(unsigned int uuid, chatroom &chatroom_info)
 {	
 	WINDOW *my_wins[4];
 	PANEL  *my_panels[4];
@@ -457,13 +463,14 @@ void window2(user &user_info, chatroom &chatroom_info)
 	}
 	
 	//pthead to send message to database
-	unsigned long t = user_info.uuid;
+	unsigned long t = uuid;
 	if(pthread_create(&thread2, NULL, get_message,(void *) t))
 	{
 	  perror("Error creating thread2: ");
 	  exit(EXIT_FAILURE);
 	}
 	
+
 	/*
 	while(1)
 	{   	
@@ -540,11 +547,17 @@ void *get_message(void *t)
 
 void *show_message(void *ptr)
 {
-   int count = 0;
-   while(1)
-   {
-	int second_run = 0;
-	int show_msg = 1;
+  int count = 0;
+  int count_user = 0;
+  int show_msg = 1;
+  int second_run = 0;
+  while(1)
+  {
+    	sleep(1);
+    	Message.recv ( &message_List );
+    	User.recv (&user_List);
+	
+	int show_user = 13;
 
 	//clear out line when chat message is a lot
 	if(show_msg == 14)
@@ -558,22 +571,34 @@ void *show_message(void *ptr)
 	    	second_run ++;
 	}
 
-	
-	User.recv (&user_List);
-	Message.recv ( &message_List );
+	if(count_user != user_List.size())
+	{
+	  for(unsigned int j = 0; j < user_List.size(); j++)
+	  {
+	    mvprintw(show_user, 51,"%s, %d", user_List[j].nick, user_List[j].uuid);
+	    show_user++;
+	  }
+	}
 	//use to check if there is new message in the database
+	//if(count != message_List.size())
 	if(count != message_List.size())
 	{
-	  for(unsigned int i= 0; i < message_List.size(); i++)
-	  {
-	    mvprintw(show_msg, 2,"%s", message_List[i].message);
+	  unsigned int i= message_List.size() - 1;
+	  //for(unsigned int i= 0; i < message_List.size(); i++)
+	  //{
+	    for(unsigned int j = 0; j < user_List.size(); j++)
+	    {
+		if(user_List[j].uuid == message_List[i].uuid)
+		{
+		   mvprintw(show_msg, 2,"%s: %s", user_List[j].nick, message_List[i].message);
+		}
+	    }
 	    show_msg++;
-	  }
-	  count = message_List.size();
+	  //}
 	}
-
-	sleep(1);
-   }
+	count = message_List.size();
+	count_user = user_List.size();
+  }
 }
 
 
