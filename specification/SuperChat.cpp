@@ -470,49 +470,6 @@ void window2(unsigned int uuid, chatroom &chatroom_info)
 	  exit(EXIT_FAILURE);
 	}
 	
-
-	/*
-	while(1)
-	{   	
-		mvgetstr(17,6, str_msg);
-		message message_info;	
-		message_info.cksum = 0;
-		message_info.uuid = user_info.uuid; 
-		message_info.chatroom_idx = 1;		
-		strncpy(message_info.message, str_msg, sizeof(message_info.message));
-		mvprintw(17,6, "                                         ");
-	
-		Message.send(message_info);	
-		
-		
-		chatRoom.recv ( &room_List );
-		User.recv (&user_List);	
-		
-		
-		if(show_msg == 14)
-		{
-			show_msg = 1;
-			int new_show_msg;
-			for(new_show_msg = 1; new_show_msg < 15; new_show_msg++)
-			{
-			  mvprintw(new_show_msg,2, "                           ");
-			}			  
-		    	second_run ++;
-		}
-
-		Message.recv ( &message_List );
-		for(unsigned int i= message_List.size() - 1; i >= 0 ; i--)
-		{
-		  mvprintw(show_msg, 2,"%s: %s",user_info.nick, message_List[i].message);
-		}
-		
-		show_msg++;
-		    			
-		
-	    //if(strcmp(str_msg,"/back") == 0)
-	    	//window1(str_user);
-	}
-	*/ 
 	if(pthread_join(thread1, NULL))
 	{
 	  perror("Problem with pthread_join: ");
@@ -553,18 +510,17 @@ void *show_message(void *ptr)
   int second_run = 0;
   while(1)
   {
-    	sleep(1);
+    	sleep(0.1);
     	Message.recv ( &message_List );
     	User.recv (&user_List);
 	
-	int show_user = 13;
 
 	//clear out line when chat message is a lot
-	if(show_msg == 14)
+	if(show_msg == 15)
 	{
 		show_msg = 1;
 		int new_show_msg;
-		for(new_show_msg = 1; new_show_msg < 15; new_show_msg++)
+		for(new_show_msg = 1; new_show_msg < 16; new_show_msg++)
 		{
 		  mvprintw(new_show_msg,2, "                           ");
 		}			  
@@ -573,11 +529,17 @@ void *show_message(void *ptr)
 
 	if(count_user != user_List.size())
 	{
+	  int show_user = 13;
 	  for(unsigned int j = 0; j < user_List.size(); j++)
 	  {
-	    mvprintw(show_user, 51,"%s, %d", user_List[j].nick, user_List[j].uuid);
-	    show_user++;
+	    if(strcmp(user_List[j].nick, user_List[j+1].nick) != 0)
+	    {
+		mvprintw(show_user, 51,"%s, %d", user_List[j].nick, user_List[j].uuid);
+	    	show_user++;
+	    }
+	    
 	  }
+	  mvprintw(17,6, "");
 	}
 	//use to check if there is new message in the database
 	//if(count != message_List.size())
@@ -591,6 +553,7 @@ void *show_message(void *ptr)
 		if(user_List[j].uuid == message_List[i].uuid)
 		{
 		   mvprintw(show_msg, 2,"%s: %s", user_List[j].nick, message_List[i].message);
+		   mvprintw(17,6, "");
 		}
 	    }
 	    show_msg++;
